@@ -5,7 +5,10 @@ import Footer from "../components/Footer";
 
 async function getProducts() {
   try {
-    const res = await fetch("https://fakestoreapi.com/products");
+    const res = await fetch("https://fakestoreapi.com/products", {
+      // Add timeout for better reliability
+      signal: AbortSignal.timeout(10000), // 10 second timeout
+    });
     
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
@@ -15,13 +18,20 @@ async function getProducts() {
     
     // Check if response is HTML (error page) instead of JSON
     if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-      throw new Error('Received HTML instead of JSON - API may be down or returning error page');
+      throw new Error('Received HTML instead of JSON - API may be down');
     }
     
-    return JSON.parse(text);
+    const data = JSON.parse(text);
+    
+    // Ensure we have valid data
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error('Invalid data format from API');
+    }
+    
+    return data;
   } catch (error) {
-    console.error('Failed to fetch products:', error);
-    // Return empty array as fallback for static generation
+    console.error('Failed to fetch products:', error instanceof Error ? error.message : 'Unknown error');
+    // Return empty array if API fails
     return [];
   }
 }
